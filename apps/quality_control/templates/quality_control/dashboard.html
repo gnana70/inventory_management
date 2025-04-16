@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Quality Control Dashboard" %}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">{% trans "Quality Control Dashboard" %}</h1>
+        <a href="{% url 'quality_control:component_list' %}" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow transition">
+            {% trans "View All Components in QC" %}
+        </a>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">{% trans "Orders with Components in QC" %}</h2>
+        
+        {% if orders_with_counts %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead>
+                        <tr class="bg-gray-100 border-b">
+                            <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{% trans "Order ID" %}</th>
+                            <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{% trans "Request Person" %}</th>
+                            <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{% trans "Team" %}</th>
+                            <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{% trans "Created" %}</th>
+                            <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{% trans "Components in QC" %}</th>
+                            <th class="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for item in orders_with_counts %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-4 px-6 text-sm">
+                                <a href="{% url 'orders:detail' order_id=item.order.id %}" class="text-blue-600 hover:text-blue-800">
+                                    {{ item.order.order_id }}
+                                </a>
+                            </td>
+                            <td class="py-4 px-6 text-sm">{{ item.order.request_person.get_full_name }}</td>
+                            <td class="py-4 px-6 text-sm">{{ item.order.requested_team.name }}</td>
+                            <td class="py-4 px-6 text-sm">{{ item.order.created_at|date:"d M Y" }}</td>
+                            <td class="py-4 px-6 text-sm">
+                                <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">
+                                    {{ item.qc_count }} component{{ item.qc_count|pluralize }}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6 text-sm">
+                                <a href="{% url 'quality_control:order_components' order_id=item.order.id %}" class="text-blue-600 hover:text-blue-800 mr-3">
+                                    <i class="fas fa-clipboard-list mr-1"></i> {% trans "View" %}
+                                </a>
+                                <a href="{% url 'quality_control:bulk_update' order_id=item.order.id %}" class="text-green-600 hover:text-green-800">
+                                    <i class="fas fa-tasks mr-1"></i> {% trans "Bulk QC" %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-clipboard-check text-4xl mb-4"></i>
+                <p>{% trans "No orders currently have components in QC state." %}</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

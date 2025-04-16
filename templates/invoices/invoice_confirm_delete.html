@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Delete Invoice" %}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-lg mx-auto bg-white rounded-lg shadow-md p-6">
+        <div class="text-center mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h1 class="text-2xl font-bold text-gray-800 mt-4">{% trans "Delete Invoice" %}</h1>
+        </div>
+        
+        <div class="text-center mb-6">
+            <p class="text-red-600 font-medium mb-4">{% trans "Warning: This action cannot be undone." %}</p>
+            <p class="text-gray-700">
+                {% blocktrans with invoice_number=invoice.invoice_number %}
+                Are you sure you want to delete invoice "{{ invoice_number }}"?
+                {% endblocktrans %}
+            </p>
+        </div>
+        
+        <div class="bg-gray-50 p-4 rounded-md mb-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-2">{% trans "Invoice Details" %}</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "Invoice Number" %}</p>
+                    <p class="font-medium">{{ invoice.invoice_number }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "Vendor" %}</p>
+                    <p class="font-medium">{{ invoice.vendor_name }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "Date" %}</p>
+                    <p class="font-medium">{{ invoice.invoice_date }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-gray-500">{% trans "Amount" %}</p>
+                    <p class="font-medium">{{ invoice.total_amount }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex justify-center space-x-4">
+            <a href="{% url 'invoices:detail' invoice.id %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-6 rounded shadow transition">
+                {% trans "Cancel" %}
+            </a>
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white py-2 px-6 rounded shadow transition">
+                    {% trans "Delete" %}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

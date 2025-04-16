@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Select Order for Invoice | {{ block.super }}{% endblock %}
+
+{% block page_title %}Select Order for Invoice{% endblock %}
+{% block page_subtitle %}Choose an order to create invoices for its components{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg p-6">
+    <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-700 mb-4">Order Selection</h2>
+        <p class="text-gray-600 mb-4">Select an order and choose how you want to create invoices for its components:</p>
+        <ul class="list-disc list-inside text-gray-600 mb-4">
+            <li>Create a single invoice for all components (same price and GST for all)</li>
+            <li>Select specific components and set individual prices for each</li>
+        </ul>
+    </div>
+    
+    <form method="post" action="{% url 'invoices:select_order' %}">
+        {% csrf_token %}
+        
+        <div class="mb-4">
+            <label for="{{ form.order.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                {{ form.order.label }}
+            </label>
+            {{ form.order }}
+            {% if form.order.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.order.errors.0 }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <div class="flex items-start">
+                <div class="flex items-center h-5">
+                    {{ form.invoice_all_components }}
+                </div>
+                <div class="ml-3 text-sm">
+                    <label for="{{ form.invoice_all_components.id_for_label }}" class="font-medium text-gray-700">
+                        {{ form.invoice_all_components.label }}
+                    </label>
+                    <p class="text-gray-500">All components will have the same price and GST rate</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex justify-end space-x-3 mt-6">
+            <a href="{% url 'invoices:list' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                Cancel
+            </a>
+            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Continue
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %} 

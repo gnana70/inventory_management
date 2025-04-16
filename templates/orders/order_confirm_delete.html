@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Order: {{ order.order_id }}{% endblock %}
+
+{% block page_title %}Delete Order: {{ order.order_id }}{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="mb-6">
+        <h2 class="text-xl font-semibold text-red-600 mb-4">Are you sure you want to delete this order?</h2>
+        <p class="text-gray-700 mb-4">This will permanently delete the order and all associated components. This action cannot be undone.</p>
+        
+        <div class="border border-gray-200 rounded-md p-4 mb-4">
+            <h3 class="font-medium mb-2">Order Details</h3>
+            <div class="text-sm text-gray-600">
+                <p><strong>Order ID:</strong> {{ order.order_id }}</p>
+                {% if order.request_id %}
+                <p><strong>Request ID:</strong> {{ order.request_id }}</p>
+                {% endif %}
+                <p><strong>Status:</strong> {{ order.get_status_display }}</p>
+                <p><strong>Requested By:</strong> {{ order.request_person.get_full_name|default:order.request_person.username }}</p>
+                <p><strong>Requested Team:</strong> {{ order.requested_team.name }}</p>
+                <p><strong>Created:</strong> {{ order.created_at|date:"M d, Y H:i" }}</p>
+                <p><strong>Number of Components:</strong> {{ order.components.count }}</p>
+            </div>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex space-x-4">
+                <a href="{% url 'orders:detail' order.id %}" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded">
+                    Cancel
+                </a>
+                <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded">
+                    Confirm Delete
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %} 

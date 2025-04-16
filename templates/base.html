@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Inventory Management System{% endblock %}</title>
+    
+    <!-- CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    {% block extra_css %}{% endblock %}
+    
+    <!-- JavaScript -->
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/htmx.org@1.6.1" crossorigin="anonymous"></script>
+    {% block extra_js %}{% endblock %}
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center">
+                <a href="{% url 'dashboard:index' %}" class="text-xl font-bold">Inventory Management System</a>
+            </div>
+            
+            {% if user.is_authenticated %}
+            <div class="flex items-center space-x-4">
+                <div class="relative" x-data="{ isOpen: false }">
+                    <button @click="isOpen = !isOpen" class="flex items-center space-x-2 focus:outline-none">
+                        <span>{{ user.get_full_name|default:user.username }}</span>
+                        <i class="fas fa-chevron-down text-sm"></i>
+                    </button>
+                    
+                    <div x-show="isOpen" @click.away="isOpen = false" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                        <a href="{% url 'accounts:profile' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Profile</a>
+                        {% if user.is_staff %}
+                        <a href="{% url 'admin:index' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Admin</a>
+                        {% endif %}
+                        <a href="{% url 'accounts:logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div>
+                <a href="{% url 'accounts:login' %}" class="px-4 py-2 bg-blue-700 hover:bg-blue-800 rounded">Login</a>
+            </div>
+            {% endif %}
+        </div>
+    </header>
+    
+    <div class="flex flex-1">
+        <!-- Sidebar -->
+        {% if user.is_authenticated %}
+        <aside class="bg-gray-800 text-white w-64 py-4 px-2 fixed h-full left-0 top-16 overflow-y-auto hidden md:block">
+            <nav>
+                <ul class="space-y-2">
+                    <li>
+                        <a href="{% url 'dashboard:index' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if request.path == '/dashboard/' %}bg-gray-700{% endif %}">
+                            <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'orders:list' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/orders/' in request.path %}bg-gray-700{% endif %}">
+                            <i class="fas fa-shopping-cart mr-2"></i>Orders
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'invoices:list' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/invoices/' in request.path %}bg-gray-700{% endif %}">
+                            <i class="fas fa-file-invoice-dollar mr-2"></i>Invoices
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'quality_control:dashboard' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/quality-control/' in request.path %}bg-gray-700{% endif %}">
+                            <i class="fas fa-tasks mr-2"></i>Quality Control
+                        </a>
+                    </li>
+                    <li class="border-t border-gray-700 pt-2 mt-2">
+                        <a href="{% url 'accounts:user_list' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/accounts/users/' in request.path %}bg-gray-700{% endif %}">
+                            <i class="fas fa-users mr-2"></i>Users
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'accounts:team_list' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/accounts/teams/' in request.path %}bg-gray-700{% endif %}">
+                            <i class="fas fa-user-friends mr-2"></i>Teams
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'accounts:role_list' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/accounts/roles/' in request.path %}bg-gray-700{% endif %}">
+                            <i class="fas fa-user-tag mr-2"></i>Roles
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <!-- Mobile sidebar toggle -->
+        <div class="md:hidden fixed bottom-4 right-4 z-50">
+            <button id="sidebarToggle" class="bg-blue-600 text-white p-3 rounded-full shadow-lg focus:outline-none">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile sidebar -->
+        <div id="mobileSidebar" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40 hidden">
+            <div class="bg-gray-800 text-white w-64 h-full py-4 px-2 transform transition-transform -translate-x-full">
+                <div class="flex justify-between items-center mb-4 px-4">
+                    <h2 class="text-xl font-bold">Menu</h2>
+                    <button id="closeSidebar" class="text-white focus:outline-none">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <nav>
+                    <!-- Same navigation as desktop sidebar -->
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="{% url 'dashboard:index' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if request.path == '/dashboard/' %}bg-gray-700{% endif %}">
+                                <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'orders:list' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/orders/' in request.path %}bg-gray-700{% endif %}">
+                                <i class="fas fa-shopping-cart mr-2"></i>Orders
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'invoices:list' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/invoices/' in request.path %}bg-gray-700{% endif %}">
+                                <i class="fas fa-file-invoice-dollar mr-2"></i>Invoices
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'quality_control:dashboard' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/quality-control/' in request.path %}bg-gray-700{% endif %}">
+                                <i class="fas fa-tasks mr-2"></i>Quality Control
+                            </a>
+                        </li>
+                        <li class="border-t border-gray-700 pt-2 mt-2">
+                            <a href="{% url 'accounts:user_list' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/accounts/users/' in request.path %}bg-gray-700{% endif %}">
+                                <i class="fas fa-users mr-2"></i>Users
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'accounts:team_list' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/accounts/teams/' in request.path %}bg-gray-700{% endif %}">
+                                <i class="fas fa-user-friends mr-2"></i>Teams
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'accounts:role_list' %}" class="block px-4 py-2 rounded hover:bg-gray-700 {% if '/accounts/roles/' in request.path %}bg-gray-700{% endif %}">
+                                <i class="fas fa-user-tag mr-2"></i>Roles
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Main content -->
+        <main class="flex-1 {% if user.is_authenticated %}md:ml-64{% endif %} p-6">
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mb-6">
+                {% for message in messages %}
+                <div class="p-4 mb-4 rounded {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Page heading -->
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">{% block page_title %}{% endblock %}</h1>
+                <p class="text-gray-600">{% block page_subtitle %}{% endblock %}</p>
+            </div>
+            
+            <!-- Page content -->
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="bg-white py-4 shadow-inner mt-auto">
+        <div class="container mx-auto px-4 text-center text-gray-600">
+            <p>&copy; {% now "Y" %} Inventory Management System. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <!-- Additional JavaScript -->
+    <script>
+        // Mobile sidebar toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const closeSidebar = document.getElementById('closeSidebar');
+            const mobileSidebar = document.getElementById('mobileSidebar');
+            const sidebarContent = mobileSidebar.querySelector('div');
+            
+            if (sidebarToggle && mobileSidebar) {
+                sidebarToggle.addEventListener('click', function() {
+                    mobileSidebar.classList.toggle('hidden');
+                    sidebarContent.classList.toggle('-translate-x-full');
+                });
+            }
+            
+            if (closeSidebar && mobileSidebar) {
+                closeSidebar.addEventListener('click', function() {
+                    mobileSidebar.classList.add('hidden');
+                    sidebarContent.classList.add('-translate-x-full');
+                });
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

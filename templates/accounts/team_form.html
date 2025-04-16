@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+{% block page_subtitle %}{% if team %}Update team details{% else %}Create a new team{% endif %}{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="mb-4">
+            <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Team Name</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+            <p class="text-red-500 text-xs mt-1">{{ form.name.errors.0 }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="mb-4">
+            <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            {{ form.description }}
+            {% if form.description.errors %}
+            <p class="text-red-500 text-xs mt-1">{{ form.description.errors.0 }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="flex justify-end space-x-3">
+            <a href="{% url 'accounts:team_list' %}" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded">
+                Cancel
+            </a>
+            <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">
+                {% if team %}Save Changes{% else %}Create Team{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %} 

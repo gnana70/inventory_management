@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Invoice Details" %}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">
+            {% trans "Invoice" %}: {{ invoice.invoice_number }}
+        </h1>
+        <div class="flex space-x-3">
+            <a href="{% url 'invoices:list' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded shadow transition">
+                {% trans "Back to Invoices" %}
+            </a>
+            {% if invoice.status == 'pending' %}
+                <a href="{% url 'invoices:edit' invoice.id %}" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded shadow transition">
+                    {% trans "Edit Invoice" %}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center">
+                <span class="mr-3 text-gray-700">{% trans "Status" %}:</span>
+                
+                {% if invoice.status == 'pending' %}
+                    <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        {% trans "Pending" %}
+                    </span>
+                {% elif invoice.status == 'approved' %}
+                    <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        {% trans "Approved" %}
+                    </span>
+                {% elif invoice.status == 'rejected' %}
+                    <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                        {% trans "Rejected" %}
+                    </span>
+                {% elif invoice.status == 'paid' %}
+                    <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {% trans "Paid" %}
+                    </span>
+                {% endif %}
+            </div>
+            
+            {% if invoice.status == 'pending' %}
+                <div class="flex space-x-2">
+                    <form method="post" action="{% url 'invoices:status_update' invoice.id %}" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="approved">
+                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white py-1 px-3 rounded shadow transition">
+                            {% trans "Approve" %}
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'invoices:status_update' invoice.id %}" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="rejected">
+                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded shadow transition">
+                            {% trans "Reject" %}
+                        </button>
+                    </form>
+                </div>
+            {% elif invoice.status == 'approved' %}
+                <form method="post" action="{% url 'invoices:status_update' invoice.id %}" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="status" value="paid">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded shadow transition">
+                        {% trans "Mark as Paid" %}
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <!-- Invoice Details -->
+        <div class="bg-white rounded-lg shadow-md p-6 col-span-2">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">{% trans "Invoice Information" %}</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">{% trans "Invoice Number" %}</h3>
+                    <p class="mt-1">{{ invoice.invoice_number }}</p>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">{% trans "Vendor Name" %}</h3>
+                    <p class="mt-1">{{ invoice.vendor_name }}</p>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">{% trans "Invoice Date" %}</h3>
+                    <p class="mt-1">{{ invoice.invoice_date }}</p>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">{% trans "Order" %}</h3>
+                    <p class="mt-1">
+                        {% if invoice.order %}
+                            <a href="#" class="text-blue-600 hover:text-blue-900">
+                                {{ invoice.order.order_id }}
+                            </a>
+                        {% else %}
+                            <span class="text-gray-500">{% trans "Components Only" %}</span>
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">{% trans "Created By" %}</h3>
+                    <p class="mt-1">{{ invoice.created_by.get_full_name|default:invoice.created_by.username }}</p>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">{% trans "Created On" %}</h3>
+                    <p class="mt-1">{{ invoice.created_at }}</p>
+                </div>
+                
+                {% if invoice.approved_by %}
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">{% trans "Approved By" %}</h3>
+                    <p class="mt-1">{{ invoice.approved_by.get_full_name|default:invoice.approved_by.username }}</p>
+                </div>
+                
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">{% trans "Approved On" %}</h3>
+                    <p class="mt-1">{{ invoice.approved_at|default:"-" }}</p>
+                </div>
+                {% endif %}
+                
+                {% if invoice.paid_at %}
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500">{% trans "Paid On" %}</h3>
+                    <p class="mt-1">{{ invoice.paid_at }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if invoice.notes %}
+            <div class="mt-6">
+                <h3 class="text-sm font-medium text-gray-500">{% trans "Notes" %}</h3>
+                <p class="mt-1 text-gray-800 whitespace-pre-line">{{ invoice.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Financial Summary -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">{% trans "Financial Summary" %}</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-700">{% trans "Base Amount" %}</span>
+                        <span class="font-medium">{{ invoice.amount }}</span>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-700">{% trans "GST" %}</span>
+                        <span class="font-medium">{{ invoice.gst_amount }}</span>
+                    </div>
+                </div>
+                
+                <div class="pt-4 border-t border-gray-200">
+                    <div class="flex justify-between">
+                        <span class="text-lg font-bold text-gray-900">{% trans "Total Amount" %}</span>
+                        <span class="text-lg font-bold text-gray-900">{{ invoice.total_amount }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Component Details -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">{% trans "Invoice Components" %}</h2>
+        
+        {% if invoice_components %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {% trans "Component" %}
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {% trans "Part Number" %}
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {% trans "Quantity" %}
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {% trans "Unit Price" %}
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {% trans "Subtotal" %}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for component in invoice_components %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {{ component.component.name }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {{ component.component.part_number }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {{ component.quantity }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {{ component.unit_price }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap font-medium">
+                                    {{ component.subtotal }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-gray-500">{% trans "No components linked to this invoice." %}</p>
+        {% endif %}
+    </div>
+    
+    <!-- Attachments -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-medium text-gray-900">{% trans "Attachments" %}</h2>
+            {% if invoice.status == 'pending' %}
+            <button type="button" id="showUploadForm" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded shadow transition">
+                {% trans "Add Attachments" %}
+            </button>
+            {% endif %}
+        </div>
+        
+        <!-- Upload Form (Hidden by Default) -->
+        <div id="uploadForm" class="hidden border border-gray-200 rounded p-4 mb-4">
+            <form method="post" action="{% url 'invoices:upload_attachment' invoice.id %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label for="attachments" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Upload Files" %}</label>
+                    <input type="file" name="attachments" id="attachments" multiple 
+                        class="border border-gray-300 rounded px-3 py-2 w-full">
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" id="cancelUpload" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-1 px-3 rounded shadow transition mr-2">
+                        {% trans "Cancel" %}
+                    </button>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded shadow transition">
+                        {% trans "Upload" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        {% if attachments %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for attachment in attachments %}
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="p-4">
+                            <div class="flex items-center">
+                                {% if 'image' in attachment.file_type %}
+                                    <div class="bg-blue-100 p-2 rounded">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                {% elif 'pdf' in attachment.file_type %}
+                                    <div class="bg-red-100 p-2 rounded">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        </svg>
+                                    </div>
+                                {% else %}
+                                    <div class="bg-gray-100 p-2 rounded">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                {% endif %}
+                                <div class="ml-3 overflow-hidden">
+                                    <p class="text-sm font-medium text-gray-900 truncate">{{ attachment.file_name }}</p>
+                                    <p class="text-xs text-gray-500">{{ attachment.file_size|filesizeformat }}</p>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex justify-between">
+                                <a href="{{ attachment.file.url }}" target="_blank" class="text-blue-600 hover:text-blue-900 text-sm font-medium">
+                                    {% trans "View" %}
+                                </a>
+                                {% if invoice.status == 'pending' %}
+                                <form method="post" action="{% url 'invoices:delete_attachment' attachment.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="text-red-600 hover:text-red-900 text-sm font-medium">
+                                        {% trans "Delete" %}
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-gray-500">{% trans "No attachments found." %}</p>
+        {% endif %}
+    </div>
+    
+    {% if invoice.status == 'pending' %}
+    <!-- Delete Invoice -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-lg font-medium text-red-600 mb-4">{% trans "Danger Zone" %}</h2>
+        <p class="text-gray-700 mb-4">{% trans "Once you delete an invoice, there is no going back. Please be certain." %}</p>
+        
+        <form method="post" action="{% url 'invoices:delete' invoice.id %}" class="inline" 
+              onsubmit="return confirm('{% trans 'Are you sure you want to delete this invoice? This action cannot be undone.' %}');">
+            {% csrf_token %}
+            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded shadow transition">
+                {% trans "Delete Invoice" %}
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const showUploadFormBtn = document.getElementById('showUploadForm');
+        const uploadForm = document.getElementById('uploadForm');
+        const cancelUploadBtn = document.getElementById('cancelUpload');
+        
+        if (showUploadFormBtn) {
+            showUploadFormBtn.addEventListener('click', function() {
+                uploadForm.classList.remove('hidden');
+                showUploadFormBtn.classList.add('hidden');
+            });
+        }
+        
+        if (cancelUploadBtn) {
+            cancelUploadBtn.addEventListener('click', function() {
+                uploadForm.classList.add('hidden');
+                showUploadFormBtn.classList.remove('hidden');
+            });
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,566 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Order: {{ order.order_id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-timeline {
+        position: relative;
+    }
+    
+    .status-timeline::before {
+        content: '';
+        position: absolute;
+        height: 100%;
+        width: 2px;
+        background-color: #e5e7eb;
+        left: 15px;
+        top: 0;
+    }
+    
+    .status-item {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .status-icon {
+        background-color: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 50%;
+        height: 32px;
+        width: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .status-icon.active {
+        border-color: #3b82f6;
+        color: #3b82f6;
+    }
+    
+    .status-icon.completed {
+        border-color: #10b981;
+        background-color: #10b981;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}Order: {{ order.order_id }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Order Information -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <div class="text-gray-500">
+                        {% if order.request_id %}
+                        Request ID: {{ order.request_id }}
+                        {% endif %}
+                    </div>
+                    <h2 class="text-xl font-bold">{{ order.order_id }}</h2>
+                    <div class="text-gray-500">
+                        Created: {{ order.created_at|date:"M d, Y H:i" }}
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    {% if order.status != 'completed' %}
+                    <a href="{% url 'orders:update' order.id %}" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    {% endif %}
+                    <button type="button" id="update-status-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
+                        <i class="fas fa-exchange-alt"></i> Update Status
+                    </button>
+                    <a href="{% url 'orders:delete' order.id %}" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded">
+                        <i class="fas fa-trash-alt"></i> Delete
+                    </a>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h3 class="text-lg font-medium mb-3">Order Details</h3>
+                    <table class="w-full">
+                        <tr>
+                            <td class="py-2 text-sm text-gray-500">Requester:</td>
+                            <td class="py-2 text-sm">
+                                {{ order.request_person.get_full_name|default:order.request_person.username }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm text-gray-500">Team:</td>
+                            <td class="py-2 text-sm">{{ order.requested_team.name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm text-gray-500">Status:</td>
+                            <td class="py-2 text-sm">
+                                {% if order.status == 'requested' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                                    <i class="fas fa-file-alt mr-1"></i> Requested
+                                </span>
+                                {% elif order.status == 'placed' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                                    <i class="fas fa-clipboard-check mr-1"></i> Placed
+                                </span>
+                                {% elif order.status == 'in_transit' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-shipping-fast mr-1"></i> In Transit
+                                </span>
+                                {% elif order.status == 'received' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">
+                                    <i class="fas fa-dolly mr-1"></i> Received
+                                </span>
+                                {% elif order.status == 'qc' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">
+                                    <i class="fas fa-tasks mr-1"></i> In QC
+                                </span>
+                                {% elif order.status == 'handover' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-teal-100 text-teal-800">
+                                    <i class="fas fa-people-carry mr-1"></i> Handover
+                                </span>
+                                {% elif order.status == 'completed' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                    <i class="fas fa-check-circle mr-1"></i> Completed
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-medium mb-3">Financial Information</h3>
+                    <table class="w-full">
+                        <tr>
+                            <td class="py-2 text-sm text-gray-500">Requested Amount:</td>
+                            <td class="py-2 text-sm">
+                                {% if order.requested_amount %}
+                                ${{ order.requested_amount }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm text-gray-500">Actual Amount:</td>
+                            <td class="py-2 text-sm">
+                                {% if order.actual_amount %}
+                                ${{ order.actual_amount }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 text-sm text-gray-500">Difference:</td>
+                            <td class="py-2 text-sm">
+                                {% if order.requested_amount and order.actual_amount %}
+                                ${{ order.actual_amount|add:"-"|add:order.requested_amount }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            {% if order.notes %}
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-3">Notes</h3>
+                <div class="bg-gray-50 p-4 rounded text-sm">
+                    {{ order.notes|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+            
+            <h3 class="text-lg font-medium mb-3">Components</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Package</th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Number</th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                            <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for component in components %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-4 px-4 text-sm font-medium text-gray-900">
+                                {{ component.name }}
+                            </td>
+                            <td class="py-4 px-4 text-sm text-gray-500">
+                                {{ component.value|default:"-" }}
+                            </td>
+                            <td class="py-4 px-4 text-sm text-gray-500">
+                                {{ component.package|default:"-" }}
+                            </td>
+                            <td class="py-4 px-4 text-sm text-gray-500">
+                                {{ component.part_number|default:"-" }}
+                            </td>
+                            <td class="py-4 px-4 text-sm text-gray-500">
+                                {{ component.quantity }}
+                            </td>
+                            <td class="py-4 px-4 text-sm text-gray-500">
+                                {% if component.due_date %}
+                                {{ component.due_date|date:"M d, Y" }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td class="py-4 px-4 text-sm">
+                                {% if component.status == 'requested' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                                    <i class="fas fa-file-alt mr-1"></i> Requested
+                                </span>
+                                {% elif component.status == 'placed' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                                    <i class="fas fa-clipboard-check mr-1"></i> Placed
+                                </span>
+                                {% elif component.status == 'in_transit' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                                    <i class="fas fa-shipping-fast mr-1"></i> In Transit
+                                </span>
+                                {% elif component.status == 'received' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">
+                                    <i class="fas fa-dolly mr-1"></i> Received
+                                </span>
+                                {% elif component.status == 'qc' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">
+                                    <i class="fas fa-tasks mr-1"></i> In QC
+                                </span>
+                                {% elif component.status == 'qc_failed' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
+                                    <i class="fas fa-times-circle mr-1"></i> QC Failed
+                                </span>
+                                {% elif component.status == 'qc_successful' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                    <i class="fas fa-check-circle mr-1"></i> QC Successful
+                                </span>
+                                {% elif component.status == 'handover' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-teal-100 text-teal-800">
+                                    <i class="fas fa-people-carry mr-1"></i> Handover
+                                </span>
+                                {% elif component.status == 'completed' %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                    <i class="fas fa-check-circle mr-1"></i> Completed
+                                </span>
+                                {% endif %}
+                                <button type="button" 
+                                        class="ml-2 text-blue-600 hover:text-blue-800 update-component-status-btn" 
+                                        data-component-id="{{ component.id }}" 
+                                        data-component-name="{{ component.name }}"
+                                        data-current-status="{{ component.status }}">
+                                    <i class="fas fa-edit text-xs"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="py-4 px-4 text-sm text-center text-gray-500">
+                                No components added to this order yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Status History -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-medium mb-3">Status History</h3>
+            <div class="status-timeline pl-8">
+                {% for history in status_history %}
+                <div class="status-item mb-4">
+                    <div class="flex">
+                        <div class="status-icon {% if forloop.first %}active{% endif %} {% if not forloop.first %}completed{% endif %}">
+                            {% if forloop.first %}
+                            <i class="fas fa-dot-circle"></i>
+                            {% else %}
+                            <i class="fas fa-check"></i>
+                            {% endif %}
+                        </div>
+                        <div class="ml-4">
+                            <div class="flex justify-between">
+                                <div class="font-medium">{{ history.get_status_display }}</div>
+                                <div class="text-sm text-gray-500">{{ history.changed_at|date:"M d, Y H:i" }}</div>
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                Changed by: {{ history.changed_by.get_full_name|default:history.changed_by.username }}
+                            </div>
+                            {% if history.notes %}
+                            <div class="text-sm mt-1 bg-gray-50 p-2 rounded">
+                                {{ history.notes }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-sm text-gray-500">No status history available.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Related Information -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-lg font-medium mb-3">Invoices</h3>
+            <div class="text-sm text-gray-500 mb-4">
+                <p>Create an invoice for components in this order.</p>
+            </div>
+            <a href="{% url 'invoices:create_bulk_invoice' order_id=order.id %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm block text-center mb-2">
+                <i class="fas fa-file-invoice-dollar"></i> Create Single Invoice
+            </a>
+            <a href="{% url 'invoices:select_components' order_id=order.id %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm block text-center">
+                <i class="fas fa-list-check"></i> Select Components for Invoice
+            </a>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-medium mb-3">Quality Control</h3>
+            <div class="text-sm text-gray-500 mb-4">
+                {% if qc_components_count > 0 %}
+                    <p>{{ qc_components_count }} component{{ qc_components_count|pluralize }} waiting for quality control.</p>
+                {% else %}
+                    <p>No components are currently in QC state for this order.</p>
+                {% endif %}
+            </div>
+            {% if qc_components_count > 0 %}
+                <a href="{% url 'quality_control:order_components' order_id=order.id %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm block text-center mb-2">
+                    <i class="fas fa-clipboard-list"></i> View Components in QC
+                </a>
+                <a href="{% url 'quality_control:bulk_update' order_id=order.id %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm block text-center">
+                    <i class="fas fa-tasks"></i> Bulk QC Update
+                </a>
+            {% else %}
+                <a href="{% url 'quality_control:dashboard' %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm block text-center">
+                    <i class="fas fa-clipboard-check"></i> QC Dashboard
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Status Update Modal -->
+<div id="status-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center hidden z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium">Update Order Status</h3>
+                <button type="button" id="close-modal" class="text-gray-400 hover:text-gray-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="status-form" method="post" data-url="{% url 'orders:update_status' order.id %}">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">New Status</label>
+                    <select name="status" class="select w-full">
+                        {% for value, label in order.STATUS_CHOICES %}
+                        <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea name="notes" class="textarea w-full" rows="3" placeholder="Add notes about this status change (optional)"></textarea>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" id="cancel-modal" class="px-4 py-2 bg-gray-300 text-gray-700 rounded mr-2">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Update Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Component Status Update Modal -->
+<div id="component-status-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center hidden z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-4">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium">Update Component Status</h3>
+                <button type="button" id="close-component-modal" class="text-gray-400 hover:text-gray-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="component-status-form" method="post">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-4">Update status for <span id="component-name-display" class="font-semibold"></span></p>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">New Status</label>
+                    <select name="status" id="component-status-select" class="select w-full">
+                        {% for value, label in order.STATUS_CHOICES %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" id="cancel-component-modal" class="px-4 py-2 bg-gray-300 text-gray-700 rounded mr-2">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Update Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const statusModal = document.getElementById('status-modal');
+        const updateStatusBtn = document.getElementById('update-status-btn');
+        const closeModal = document.getElementById('close-modal');
+        const cancelModal = document.getElementById('cancel-modal');
+        const statusForm = document.getElementById('status-form');
+        
+        // Component status modal elements
+        const componentStatusModal = document.getElementById('component-status-modal');
+        const updateComponentStatusBtns = document.querySelectorAll('.update-component-status-btn');
+        const closeComponentModal = document.getElementById('close-component-modal');
+        const cancelComponentModal = document.getElementById('cancel-component-modal');
+        const componentStatusForm = document.getElementById('component-status-form');
+        const componentNameDisplay = document.getElementById('component-name-display');
+        const componentStatusSelect = document.getElementById('component-status-select');
+        
+        // Show modal
+        updateStatusBtn.addEventListener('click', function() {
+            statusModal.classList.remove('hidden');
+        });
+        
+        // Hide modal
+        function hideModal() {
+            statusModal.classList.add('hidden');
+        }
+        
+        closeModal.addEventListener('click', hideModal);
+        cancelModal.addEventListener('click', hideModal);
+        
+        // Close modal when clicking outside
+        statusModal.addEventListener('click', function(e) {
+            if (e.target === statusModal) {
+                hideModal();
+            }
+        });
+        
+        // Component status update functionality
+        updateComponentStatusBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const componentId = this.getAttribute('data-component-id');
+                const componentName = this.getAttribute('data-component-name');
+                const currentStatus = this.getAttribute('data-current-status');
+                
+                // Set the form action URL
+                componentStatusForm.setAttribute('data-url', `/orders/component/${componentId}/status/`);
+                
+                // Set the component name in the modal
+                componentNameDisplay.textContent = componentName;
+                
+                // Set the current status as selected
+                for (let option of componentStatusSelect.options) {
+                    if (option.value === currentStatus) {
+                        option.selected = true;
+                        break;
+                    }
+                }
+                
+                // Show the modal
+                componentStatusModal.classList.remove('hidden');
+            });
+        });
+        
+        // Hide component modal
+        function hideComponentModal() {
+            componentStatusModal.classList.add('hidden');
+        }
+        
+        closeComponentModal.addEventListener('click', hideComponentModal);
+        cancelComponentModal.addEventListener('click', hideComponentModal);
+        
+        // Close component modal when clicking outside
+        componentStatusModal.addEventListener('click', function(e) {
+            if (e.target === componentStatusModal) {
+                hideComponentModal();
+            }
+        });
+        
+        // Component status form submission
+        componentStatusForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(componentStatusForm);
+            const url = componentStatusForm.getAttribute('data-url');
+            
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to show updated status
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the component status.');
+            });
+        });
+        
+        // Status form submission via AJAX
+        statusForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(statusForm);
+            const url = statusForm.getAttribute('data-url');
+            
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload page to show updated status
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the status.');
+            });
+        });
+    });
+</script>
+{% endblock %} 

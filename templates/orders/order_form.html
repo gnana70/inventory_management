@@ -1,0 +1,468 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if order %}Edit Order: {{ order.order_id }}{% else %}Create New Order{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Component formset styling */
+    .component-formset {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.375rem;
+        margin-bottom: 1.5rem;
+        padding: 1.25rem;
+        background-color: #f9fafb;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        transition: all 0.2s ease;
+    }
+    
+    .component-formset:hover {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .component-formset:last-child {
+        margin-bottom: 0;
+    }
+    
+    /* Make delete checkbox more visible */
+    .delete-checkbox input[type="checkbox"] {
+        width: 1rem !important;
+        height: 1rem !important;
+        margin-right: 0.25rem;
+    }
+    
+    /* Section styling */
+    .form-section {
+        margin-bottom: 2rem;
+    }
+    
+    .form-section-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    /* Form field focus effects */
+    input:focus, select:focus, textarea:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    /* Button styling */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2563eb;
+    }
+    
+    .btn-secondary {
+        background-color: #9ca3af;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #6b7280;
+    }
+    
+    /* Remove component button styling */
+    .remove-component {
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        background-color: #fee2e2;
+        color: #dc2626;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .remove-component:hover {
+        background-color: #fecaca;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block page_title %}{% if order %}Edit Order: {{ order.order_id }}{% else %}Create New Order{% endif %}{% endblock %}
+{% block page_subtitle %}{% if order %}Update order details and components{% else %}Create a new procurement order{% endif %}{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <form method="post" id="order-form">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="form-section">
+                <h3 class="form-section-title">Order Information</h3>
+                
+                {% if order %}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Order ID</label>
+                    <div class="text-sm bg-gray-100 p-2 rounded">{{ order.order_id }}</div>
+                </div>
+                {% endif %}
+                
+                <div class="mb-4">
+                    <label for="{{ order_form.request_id.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Request ID</label>
+                    {{ order_form.request_id }}
+                    {% if order_form.request_id.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ order_form.request_id.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ order_form.requested_team.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Team</label>
+                    {{ order_form.requested_team }}
+                    {% if order_form.requested_team.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ order_form.requested_team.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ order_form.status.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    {{ order_form.status }}
+                    {% if order_form.status.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ order_form.status.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                {% if order and order.status != order.STATUS_REQUESTED %}
+                <div class="mb-4">
+                    <label for="status_notes" class="block text-sm font-medium text-gray-700 mb-1">Status Change Notes</label>
+                    <textarea name="status_notes" id="status_notes" rows="3" class="textarea w-full" placeholder="Notes about status change (if status is being updated)"></textarea>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-section">
+                <h3 class="form-section-title">Financial Details</h3>
+                
+                <div class="mb-4">
+                    <label for="{{ order_form.requested_amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Requested Amount</label>
+                    {{ order_form.requested_amount }}
+                    {% if order_form.requested_amount.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ order_form.requested_amount.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ order_form.actual_amount.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Actual Amount</label>
+                    {{ order_form.actual_amount }}
+                    {% if order_form.actual_amount.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ order_form.actual_amount.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ order_form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    {{ order_form.notes }}
+                    {% if order_form.notes.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ order_form.notes.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section border-t border-gray-200 pt-6">
+            <h3 class="form-section-title">Components</h3>
+            <p class="text-sm text-gray-500 mb-4">Add one or more components to this order.</p>
+            
+            {{ component_formset.management_form }}
+            
+            <div id="components-container">
+                {% for form in component_formset.forms %}
+                <div class="component-formset component-form {% if forloop.first %}mb-4{% endif %}">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="font-medium text-gray-700">Component #{{ forloop.counter }}</h4>
+                        <div class="flex justify-end">
+                            {% if form.instance.pk %}
+                            <label class="inline-flex items-center text-sm text-red-600">
+                                <span class="mr-2">Delete this component</span>
+                                <span class="delete-checkbox">{{ form.DELETE }}</span>
+                            </label>
+                            {% else %}
+                            <button type="button" class="remove-component">
+                                <i class="fas fa-trash-alt mr-1"></i> Remove
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+                    
+                    {% if form.id %}{{ form.id }}{% endif %}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="col-span-2">
+                            <div class="mb-4">
+                                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ form.name.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="mb-4">
+                                <label for="{{ form.quantity.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                                {{ form.quantity }}
+                                {% if form.quantity.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ form.quantity.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <div class="mb-4">
+                                <label for="{{ form.value.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Value</label>
+                                {{ form.value }}
+                                {% if form.value.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ form.value.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="mb-4">
+                                <label for="{{ form.package.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Package</label>
+                                {{ form.package }}
+                                {% if form.package.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ form.package.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="mb-4">
+                                <label for="{{ form.part_number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Part Number</label>
+                                {{ form.part_number }}
+                                {% if form.part_number.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ form.part_number.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <div class="mb-4">
+                                <label for="{{ form.due_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+                                {{ form.due_date }}
+                                {% if form.due_date.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ form.due_date.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="mb-4">
+                                <label for="{{ form.links.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Links</label>
+                                {{ form.links }}
+                                {% if form.links.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ form.links.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.comments.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+                        {{ form.comments }}
+                        {% if form.comments.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.comments.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.status.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-6">
+                <button type="button" id="add-component" class="btn btn-primary">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add Another Component
+                </button>
+            </div>
+        </div>
+        
+        <div class="border-t border-gray-200 pt-6 mt-6 flex justify-end space-x-3">
+            <a href="{% if order %}{% url 'orders:detail' order.id %}{% else %}{% url 'orders:list' %}{% endif %}" class="btn btn-secondary">
+                Cancel
+            </a>
+            <button type="submit" class="btn btn-primary">
+                {% if order %}Save Changes{% else %}Create Order{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const componentFormPrefix = "{{ component_formset.prefix }}";
+        const componentFormsContainer = document.getElementById('components-container');
+        const addComponentBtn = document.getElementById('add-component');
+        const totalFormsInput = document.getElementById(`id_${componentFormPrefix}-TOTAL_FORMS`);
+        
+        // Initialize date pickers
+        document.querySelectorAll('input[type="date"]').forEach(el => {
+            flatpickr(el, {
+                dateFormat: "Y-m-d",
+                allowInput: true
+            });
+        });
+        
+        // Add new component form
+        addComponentBtn.addEventListener('click', function() {
+            const formCount = parseInt(totalFormsInput.value);
+            const newForm = document.querySelector('.component-form').cloneNode(true);
+            
+            // Update form index
+            newForm.innerHTML = newForm.innerHTML.replace(
+                new RegExp(`${componentFormPrefix}-\\d+`, 'g'),
+                `${componentFormPrefix}-${formCount}`
+            );
+            
+            // Clear form values
+            newForm.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(input => {
+                input.value = '';
+            });
+            
+            // Clear hidden ID field if it exists
+            const idField = newForm.querySelector('input[type="hidden"][name$="-id"]');
+            if (idField) {
+                idField.value = '';
+            }
+            
+            // Set default status to 'requested'
+            const statusSelect = newForm.querySelector('select[name*="status"]');
+            if (statusSelect) {
+                const requestedOption = Array.from(statusSelect.options).find(option => option.value === 'requested');
+                if (requestedOption) {
+                    requestedOption.selected = true;
+                } else if (statusSelect.options.length > 0) {
+                    // Fallback to first option if 'requested' not found
+                    statusSelect.options[0].selected = true;
+                }
+            }
+            
+            // Remove delete checkbox if exists (for cloning existing forms)
+            const deleteSection = newForm.querySelector('.formset-actions');
+            if (deleteSection) {
+                deleteSection.remove();
+            }
+            
+            // Add to container
+            componentFormsContainer.appendChild(newForm);
+            
+            // Update total forms
+            totalFormsInput.value = formCount + 1;
+            
+            // Reinitialize date pickers on new form
+            newForm.querySelectorAll('input[type="date"]').forEach(el => {
+                flatpickr(el, {
+                    dateFormat: "Y-m-d",
+                    allowInput: true
+                });
+            });
+            
+            // Ensure status select has at least one option selected
+            const statusSelectNew = newForm.querySelector('select[name*="status"]');
+            if (statusSelectNew && statusSelectNew.options.length > 0 && !statusSelectNew.value) {
+                statusSelectNew.options[0].selected = true;
+            }
+            
+            // Initialize remove button for the new form
+            initRemoveButtons();
+        });
+        
+        // Function to initialize remove component buttons
+        function initRemoveButtons() {
+            document.querySelectorAll('.remove-component').forEach(button => {
+                button.addEventListener('click', function() {
+                    const formset = this.closest('.component-formset');
+                    
+                    // Only allow removal if there's more than one component form
+                    if (document.querySelectorAll('.component-formset').length > 1) {
+                        formset.remove();
+                        
+                        // Update total forms count
+                        const currentCount = parseInt(totalFormsInput.value);
+                        totalFormsInput.value = currentCount - 1;
+                        
+                        // Update component numbers in headings
+                        const componentForms = document.querySelectorAll('.component-formset');
+                        componentForms.forEach((form, index) => {
+                            const heading = form.querySelector('h4');
+                            if (heading) {
+                                heading.textContent = `Component #${index + 1}`;
+                            }
+                        });
+                    } else {
+                        // If it's the last component, just clear its values instead of removing
+                        const inputs = formset.querySelectorAll('input[type="text"], input[type="number"], textarea');
+                        inputs.forEach(input => {
+                            input.value = '';
+                        });
+                        
+                        // Clear any date picker
+                        const datePicker = formset.querySelector('input[type="date"]');
+                        if (datePicker && datePicker._flatpickr) {
+                            datePicker._flatpickr.clear();
+                        }
+                        
+                        alert('At least one component is required. Form has been cleared instead.');
+                    }
+                });
+            });
+        }
+        
+        // Initialize remove buttons on page load
+        initRemoveButtons();
+        
+        // Handle delete checkboxes
+        document.querySelectorAll('.delete-checkbox input').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const formset = this.closest('.component-formset');
+                if (this.checked) {
+                    formset.style.opacity = '0.5';
+                } else {
+                    formset.style.opacity = '1';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Select Components for Invoice | {{ block.super }}{% endblock %}
+
+{% block page_title %}Select Components for Invoice{% endblock %}
+{% block page_subtitle %}Select components from order {{ order.order_id }} to include in the invoice{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg p-6">
+    <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-700 mb-4">Order: {{ order.order_id }}</h2>
+        <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="text-sm text-gray-500">Requested by</p>
+                <p class="text-gray-700">{{ order.request_person.get_full_name|default:order.request_person.username }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Team</p>
+                <p class="text-gray-700">{{ order.requested_team.name }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Status</p>
+                <p class="text-gray-700">{{ order.get_status_display }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Created on</p>
+                <p class="text-gray-700">{{ order.created_at|date:"M d, Y" }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <form method="post" action="{% url 'invoices:select_components' order_id=order.id %}">
+        {% csrf_token %}
+        
+        <div class="mb-6">
+            <h3 class="text-md font-semibold text-gray-700 mb-3">Components</h3>
+            <p class="text-gray-600 mb-3">Select the components you want to include in this invoice:</p>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <div class="flex items-center">
+                                    <input id="select-all" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded" onclick="toggleAll(this)">
+                                    <label for="select-all" class="ml-2">Select All</label>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Part Number</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Package</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for component in components %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <input id="component-{{ component.id }}" name="component" type="checkbox" value="{{ component.id }}" class="h-4 w-4 text-blue-600 border-gray-300 rounded component-checkbox">
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">{{ component.name }}</div>
+                                <div class="text-sm text-gray-500">{{ component.value }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ component.part_number|default:"-" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ component.package|default:"-" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ component.quantity }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ component.due_date|date:"M d, Y"|default:"-" }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                No components found for this order.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="flex justify-end space-x-3 mt-6">
+            <a href="{% url 'invoices:select_order' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                Back
+            </a>
+            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Continue
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleAll(source) {
+        let checkboxes = document.getElementsByClassName('component-checkbox');
+        for (let i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = source.checked;
+        }
+    }
+</script>
+{% endblock %} 

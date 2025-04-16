@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Bulk Invoice | {{ block.super }}{% endblock %}
+
+{% block page_title %}Create Bulk Invoice{% endblock %}
+{% block page_subtitle %}Create a single invoice for all components in order {{ order.order_id }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/filepond@4.30.4/dist/filepond.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/filepond-plugin-image-preview@4.6.11/dist/filepond-plugin-image-preview.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg p-6">
+    <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-700 mb-4">Order: {{ order.order_id }}</h2>
+        <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="text-sm text-gray-500">Requested by</p>
+                <p class="text-gray-700">{{ order.request_person.get_full_name|default:order.request_person.username }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Team</p>
+                <p class="text-gray-700">{{ order.requested_team.name }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Status</p>
+                <p class="text-gray-700">{{ order.get_status_display }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-500">Created on</p>
+                <p class="text-gray-700">{{ order.created_at|date:"M d, Y" }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <form method="post" action="{% url 'invoices:create_bulk_invoice' order_id=order.id %}" enctype="multipart/form-data" id="invoiceForm">
+        {% csrf_token %}
+        
+        <div class="mb-6">
+            <h3 class="text-md font-semibold text-gray-700 mb-3">Invoice Information</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mb-4">
+                    <label for="{{ form.invoice_number.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.invoice_number.label }}
+                    </label>
+                    {{ form.invoice_number }}
+                    {% if form.invoice_number.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.invoice_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ form.invoice_date.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.invoice_date.label }}
+                    </label>
+                    {{ form.invoice_date }}
+                    {% if form.invoice_date.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.invoice_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4 md:col-span-2">
+                    <label for="{{ form.company_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.company_name.label }}
+                    </label>
+                    {{ form.company_name }}
+                    {% if form.company_name.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.company_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="text-md font-semibold text-gray-700 mb-3">Components Pricing</h3>
+            <p class="text-gray-600 mb-3">All selected components will have the same price and GST rate.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="mb-4">
+                    <label for="{{ form.price_per_unit.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.price_per_unit.label }}
+                    </label>
+                    {{ form.price_per_unit }}
+                    {% if form.price_per_unit.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.price_per_unit.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ form.gst_percentage.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.gst_percentage.label }}
+                    </label>
+                    {{ form.gst_percentage }}
+                    {% if form.gst_percentage.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.gst_percentage.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-4">
+                    <label for="{{ form.warranty_information.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.warranty_information.label }}
+                    </label>
+                    {{ form.warranty_information }}
+                    {% if form.warranty_information.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.warranty_information.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="{{ form.components.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.components.label }}
+                </label>
+                {{ form.components }}
+                <p class="mt-1 text-sm text-gray-500">Hold Ctrl or Cmd to select multiple components</p>
+                {% if form.components.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.components.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                {{ form.notes.label }}
+            </label>
+            {{ form.notes }}
+            {% if form.notes.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="text-md font-semibold text-gray-700 mb-3">Attachments</h3>
+            
+            {{ attachment_formset.management_form }}
+            
+            <div id="attachments-container">
+                {% for form in attachment_formset.forms %}
+                <div class="attachment-form border rounded-md p-4 mb-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="mb-4">
+                            <label for="{{ form.file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                File
+                            </label>
+                            {{ form.file }}
+                            {% if form.file.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.file.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                Description
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if not forloop.first %}
+                    <div class="mt-2">
+                        <button type="button" class="text-red-600 hover:text-red-800 text-sm remove-attachment">
+                            <i class="fas fa-trash-alt mr-1"></i> Remove attachment
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-2">
+                <button type="button" id="add-attachment" class="text-blue-600 hover:text-blue-800 text-sm">
+                    <i class="fas fa-plus-circle mr-1"></i> Add another attachment
+                </button>
+            </div>
+        </div>
+        
+        <div class="flex justify-end space-x-3 mt-6">
+            <a href="{% url 'invoices:select_order' %}" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                Back
+            </a>
+            <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Create Invoice
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/filepond-plugin-file-validate-type@1.2.8/dist/filepond-plugin-file-validate-type.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/filepond-plugin-image-preview@4.6.11/dist/filepond-plugin-image-preview.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/filepond@4.30.4/dist/filepond.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize FilePond for file uploads
+        FilePond.registerPlugin(FilePondPluginFileValidateType);
+        FilePond.registerPlugin(FilePondPluginImagePreview);
+        
+        const inputElements = document.querySelectorAll('input[type="file"]');
+        inputElements.forEach(inputElement => {
+            const pond = FilePond.create(inputElement, {
+                allowMultiple: false,
+                acceptedFileTypes: ['application/pdf', 'image/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+                labelFileTypeNotAllowed: 'Only PDF, image, Word, and Excel files are allowed',
+                fileValidateTypeLabelExpectedTypes: 'Accepts PDF, image, Word, and Excel files'
+            });
+        });
+        
+        // Attachment formset handling
+        const attachmentsContainer = document.getElementById('attachments-container');
+        const addAttachmentButton = document.getElementById('add-attachment');
+        const totalFormsInput = document.querySelector('[name="attachments-TOTAL_FORMS"]');
+        
+        // Add new attachment form
+        addAttachmentButton.addEventListener('click', function() {
+            const forms = attachmentsContainer.getElementsByClassName('attachment-form');
+            const formCount = forms.length;
+            
+            const template = forms[0].cloneNode(true);
+            // Update form index
+            template.innerHTML = template.innerHTML.replace(/attachments-0/g, `attachments-${formCount}`);
+            template.innerHTML = template.innerHTML.replace(/attachments\[0\]/g, `attachments[${formCount}]`);
+            
+            // Clear form values
+            const inputs = template.querySelectorAll('input, textarea');
+            inputs.forEach(input => {
+                if (input.type !== 'hidden') {
+                    input.value = '';
+                }
+            });
+            
+            // Add remove button if not already there
+            if (!template.querySelector('.remove-attachment')) {
+                const removeButton = document.createElement('div');
+                removeButton.className = 'mt-2';
+                removeButton.innerHTML = '<button type="button" class="text-red-600 hover:text-red-800 text-sm remove-attachment"><i class="fas fa-trash-alt mr-1"></i> Remove attachment</button>';
+                template.appendChild(removeButton);
+            }
+            
+            attachmentsContainer.appendChild(template);
+            
+            // Update total forms count
+            totalFormsInput.value = formCount + 1;
+            
+            // Initialize FilePond for the new file input
+            const newFileInput = template.querySelector('input[type="file"]');
+            if (newFileInput) {
+                const pond = FilePond.create(newFileInput, {
+                    allowMultiple: false,
+                    acceptedFileTypes: ['application/pdf', 'image/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+                    labelFileTypeNotAllowed: 'Only PDF, image, Word, and Excel files are allowed',
+                    fileValidateTypeLabelExpectedTypes: 'Accepts PDF, image, Word, and Excel files'
+                });
+            }
+        });
+        
+        // Remove attachment form
+        attachmentsContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-attachment') || e.target.parentElement.classList.contains('remove-attachment')) {
+                const formToRemove = e.target.closest('.attachment-form');
+                formToRemove.remove();
+                
+                // Update form indices and total count
+                const forms = attachmentsContainer.getElementsByClassName('attachment-form');
+                totalFormsInput.value = forms.length;
+            }
+        });
+    });
+</script>
+{% endblock %} 

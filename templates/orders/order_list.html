@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Orders{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-section {
+        overflow: hidden;
+        transition: all 0.3s ease;
+        max-height: 0;
+        opacity: 0;
+        margin-bottom: 0;
+        background-color: #f9fafb;
+        border-radius: 0.375rem;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .filter-section.active {
+        max-height: 500px; /* Large enough to contain all filters */
+        opacity: 1;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+    }
+    
+    /* Button styling */
+    .filter-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        background-color: #f3f4f6;
+        color: #374151;
+    }
+    
+    .filter-btn:hover {
+        background-color: #e5e7eb;
+    }
+    
+    .filter-btn.active {
+        background-color: #3b82f6;
+        color: white;
+    }
+    
+    /* Improve table styling */
+    .order-table th {
+        position: sticky;
+        top: 0;
+        background-color: #f9fafb;
+        z-index: 10;
+    }
+    
+    .order-table-container {
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    /* Search input styling */
+    .search-container {
+        position: relative;
+        max-width: 400px;
+    }
+    
+    .search-input {
+        padding-left: 2.5rem;
+        padding-right: 1rem;
+        height: 2.5rem;
+        border-radius: 0.375rem;
+        border: 1px solid #d1d5db;
+        width: 100%;
+        font-size: 0.875rem;
+        background-color: white;
+    }
+    
+    .search-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+    }
+    
+    .search-button {
+        position: absolute;
+        right: 0.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: transparent;
+        border: none;
+        color: #6b7280;
+        cursor: pointer;
+    }
+    
+    .search-button:hover {
+        color: #4b5563;
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}Orders{% endblock %}
+{% block page_subtitle %}Manage your procurement orders{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6 mb-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <div class="flex items-center space-x-2 w-full md:w-auto">
+            <div class="search-container">
+                <form method="get" class="relative w-full">
+                    <i class="fas fa-search search-icon"></i>
+                    {{ filter_form.search }}
+                    {% if filter_form.search.value %}
+                    <button type="button" class="search-button" id="clear-search" title="Clear search">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+            <button type="button" id="toggle-filters" class="filter-btn ml-2">
+                <i class="fas fa-filter mr-2"></i> Filters
+            </button>
+        </div>
+        
+        <a href="{% url 'orders:create' %}" class="mt-4 md:mt-0 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded w-full md:w-auto text-center">
+            <i class="fas fa-plus"></i> New Order
+        </a>
+    </div>
+    
+    <div id="filter-section" class="filter-section">
+        <h3 class="text-lg font-medium mb-3 text-gray-800">Filter Options</h3>
+        <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                {{ filter_form.status }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Team</label>
+                {{ filter_form.requested_team }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Requester</label>
+                {{ filter_form.request_person }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                {{ filter_form.date_from }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                {{ filter_form.date_to }}
+            </div>
+            <div class="flex items-end">
+                <input type="hidden" name="search" value="{{ filter_form.search.value|default:'' }}">
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
+                    Apply Filters
+                </button>
+                <a href="{% url 'orders:list' %}" class="ml-2 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded">
+                    Clear
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="mb-4 flex justify-between items-center">
+        <h3 class="text-lg font-medium text-gray-800">Order List</h3>
+        <div class="text-sm text-gray-500">
+            {{ orders|length }} orders found
+        </div>
+    </div>
+    
+    <div class="order-table-container">
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white order-table">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Order ID</th>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Status</th>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Requester</th>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Team</th>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Date</th>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Amount</th>
+                        <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    {% for order in orders %}
+                    <tr class="hover:bg-gray-50 transition-colors duration-150">
+                        <td class="py-4 px-4 text-sm font-medium text-gray-900">
+                            <a href="{% url 'orders:detail' order.id %}" class="text-blue-600 hover:text-blue-800 hover:underline">
+                                {{ order.order_id }}
+                            </a>
+                            {% if order.request_id %}
+                            <div class="text-xs text-gray-500">Req: {{ order.request_id }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-4 text-sm">
+                            {% if order.status == 'requested' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                                <i class="fas fa-file-alt mr-1"></i> Requested
+                            </span>
+                            {% elif order.status == 'placed' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                                <i class="fas fa-clipboard-check mr-1"></i> Placed
+                            </span>
+                            {% elif order.status == 'in_transit' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                                <i class="fas fa-shipping-fast mr-1"></i> In Transit
+                            </span>
+                            {% elif order.status == 'received' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-indigo-100 text-indigo-800">
+                                <i class="fas fa-dolly mr-1"></i> Received
+                            </span>
+                            {% elif order.status == 'qc' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">
+                                <i class="fas fa-tasks mr-1"></i> In QC
+                            </span>
+                            {% elif order.status == 'handover' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-teal-100 text-teal-800">
+                                <i class="fas fa-people-carry mr-1"></i> Handover
+                            </span>
+                            {% elif order.status == 'completed' %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                                <i class="fas fa-check-circle mr-1"></i> Completed
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-4 text-sm text-gray-500">
+                            {% if order.request_person %}
+                            {{ order.request_person.get_full_name|default:order.request_person.username }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-4 text-sm text-gray-500">
+                            {% if order.requested_team %}
+                            {{ order.requested_team.name }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-4 text-sm text-gray-500">
+                            {{ order.created_at|date:"M d, Y" }}
+                        </td>
+                        <td class="py-4 px-4 text-sm text-gray-500">
+                            {% if order.requested_amount %}
+                            ${{ order.requested_amount }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-4 text-sm">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'orders:detail' order.id %}" class="text-blue-600 hover:text-blue-800" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if order.status != 'completed' %}
+                                <a href="{% url 'orders:update' order.id %}" class="text-yellow-600 hover:text-yellow-800" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'orders:delete' order.id %}" class="text-red-600 hover:text-red-800" title="Delete">
+                                    <i class="fas fa-trash-alt"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-4 px-4 text-sm text-center text-gray-500">
+                            No orders found. 
+                            <a href="{% url 'orders:create' %}" class="text-blue-600 hover:text-blue-800">Create your first order</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Filter section toggle
+        const toggleFilters = document.getElementById('toggle-filters');
+        const filterSection = document.getElementById('filter-section');
+        
+        // Search functionality
+        const searchInput = document.querySelector('input[name="search"]');
+        const clearSearchBtn = document.getElementById('clear-search');
+        
+        // Add class to search input
+        if (searchInput) {
+            searchInput.classList.add('search-input');
+            searchInput.setAttribute('placeholder', 'Search orders...');
+        }
+        
+        // Clear search button functionality
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                // Submit the form to reload without search
+                searchInput.form.submit();
+            });
+        }
+        
+        // Check if filters are active from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasFilters = urlParams.has('status') || urlParams.has('requested_team') || 
+                          urlParams.has('request_person') || urlParams.has('date_from') || 
+                          urlParams.has('date_to');
+        
+        // Show filters section if there are active filters
+        if (hasFilters) {
+            filterSection.classList.add('active');
+            toggleFilters.classList.add('active');
+        }
+        
+        // Toggle filter section visibility
+        toggleFilters.addEventListener('click', function() {
+            filterSection.classList.toggle('active');
+            toggleFilters.classList.toggle('active');
+        });
+    });
+</script>
+{% endblock %} 

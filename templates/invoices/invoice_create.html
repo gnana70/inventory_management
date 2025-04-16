@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Create Invoice" %}{% endblock %}
+
+{% block extra_head %}
+<link href="https://unpkg.com/filepond@^4/dist/filepond.css" rel="stylesheet" />
+<link href="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-800">{% trans "Create New Invoice" %}</h1>
+        <a href="{% url 'invoices:list' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded shadow transition">
+            {% trans "Back to Invoices" %}
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <form method="post" enctype="multipart/form-data" id="invoiceForm">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">{% trans "Invoice Details" %}</h2>
+                    
+                    <div class="mb-4">
+                        <label for="invoice_number" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Invoice Number" %} *</label>
+                        <input type="text" id="invoice_number" name="invoice_number" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="vendor_name" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Vendor Name" %} *</label>
+                        <input type="text" id="vendor_name" name="vendor_name" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="invoice_date" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Invoice Date" %} *</label>
+                        <input type="date" id="invoice_date" name="invoice_date" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 datepicker">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="order" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Order" %}</label>
+                        <select id="order" name="order" 
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">{% trans "Select Order (Optional)" %}</option>
+                            {% for order in orders %}
+                                <option value="{{ order.id }}">{{ order.order_id }} - {{ order.requested_team }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="mt-1 text-sm text-gray-500">{% trans "Optional. Leave blank if invoice is for specific components only." %}</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">{% trans "Financial Details" %}</h2>
+                    
+                    <div class="mb-4">
+                        <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Amount" %} *</label>
+                        <input type="number" step="0.01" id="amount" name="amount" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="gst_amount" class="block text-sm font-medium text-gray-700 mb-1">{% trans "GST Amount" %}</label>
+                        <input type="number" step="0.01" id="gst_amount" name="gst_amount" value="0"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="total_amount" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Total Amount" %}</label>
+                        <input type="number" step="0.01" id="total_amount" disabled
+                            class="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2">
+                        <p class="mt-1 text-sm text-gray-500">{% trans "Auto-calculated from Amount + GST" %}</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">{% trans "Notes" %}</label>
+                        <textarea id="notes" name="notes" rows="3"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">{% trans "Invoice Components" %}</h2>
+                <p class="mb-4 text-sm text-gray-500">{% trans "Add components covered by this invoice." %}</p>
+                
+                <div id="componentsContainer">
+                    <div class="component-row grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 pb-4 border-b border-gray-200">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">{% trans "Component" %}</label>
+                            <select name="component_id" 
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">{% trans "Select Component" %}</option>
+                                {% for component in components %}
+                                    <option value="{{ component.id }}">{{ component.name }} - {{ component.part_number }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">{% trans "Quantity" %}</label>
+                            <input type="number" name="component_quantity" value="1" min="1"
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">{% trans "Unit Price" %}</label>
+                            <input type="number" step="0.01" name="component_price" value="0"
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button" class="remove-component bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded shadow transition">
+                                {% trans "Remove" %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="button" id="addComponent" class="mt-2 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded shadow transition">
+                    {% trans "Add Another Component" %}
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">{% trans "Attachments" %}</h2>
+                <p class="mb-4 text-sm text-gray-500">{% trans "Upload invoice files and supporting documents." %}</p>
+                
+                <input type="file" class="filepond" name="attachments" multiple data-max-file-size="10MB" data-max-files="5">
+            </div>
+            
+            <div class="mt-8 flex justify-end">
+                <a href="{% url 'invoices:list' %}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded shadow transition mr-4">
+                    {% trans "Cancel" %}
+                </a>
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded shadow transition">
+                    {% trans "Create Invoice" %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/filepond-plugin-image-preview/dist/filepond-plugin-image-preview.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-size/dist/filepond-plugin-file-validate-size.js"></script>
+<script src="https://unpkg.com/filepond-plugin-file-validate-type/dist/filepond-plugin-file-validate-type.js"></script>
+<script src="https://unpkg.com/filepond@^4/dist/filepond.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize date picker
+        flatpickr(".datepicker", {
+            dateFormat: "Y-m-d",
+            allowInput: true
+        });
+        
+        // Initialize file upload
+        FilePond.registerPlugin(
+            FilePondPluginImagePreview,
+            FilePondPluginFileValidateSize,
+            FilePondPluginFileValidateType
+        );
+        
+        FilePond.create(document.querySelector('.filepond'), {
+            allowMultiple: true,
+            acceptedFileTypes: ['application/pdf', 'image/*'],
+            labelIdle: `{% trans "Drag & Drop your files or <span class='filepond--label-action'>Browse</span>" %}`,
+            labelFileTypeNotAllowed: `{% trans "Invalid file type" %}`,
+            fileValidateTypeLabelExpectedTypes: `{% trans "Expects PDF or image files" %}`,
+            labelMaxFileSizeExceeded: `{% trans "File is too large" %}`,
+            labelMaxFileSize: `{% trans "Maximum size is {filesize}" %}`
+        });
+        
+        // Calculate total amount
+        const amountInput = document.getElementById('amount');
+        const gstInput = document.getElementById('gst_amount');
+        const totalInput = document.getElementById('total_amount');
+        
+        function calculateTotal() {
+            const amount = parseFloat(amountInput.value) || 0;
+            const gst = parseFloat(gstInput.value) || 0;
+            totalInput.value = (amount + gst).toFixed(2);
+        }
+        
+        amountInput.addEventListener('input', calculateTotal);
+        gstInput.addEventListener('input', calculateTotal);
+        calculateTotal();
+        
+        // Component row management
+        const componentsContainer = document.getElementById('componentsContainer');
+        const addComponentBtn = document.getElementById('addComponent');
+        
+        // Add new component row
+        addComponentBtn.addEventListener('click', function() {
+            const newRow = document.querySelector('.component-row').cloneNode(true);
+            const inputs = newRow.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                if (input.type !== 'button') {
+                    input.value = '';
+                }
+                if (input.name === 'component_quantity') {
+                    input.value = '1';
+                }
+                if (input.name === 'component_price') {
+                    input.value = '0';
+                }
+            });
+            
+            const removeBtn = newRow.querySelector('.remove-component');
+            removeBtn.addEventListener('click', function() {
+                newRow.remove();
+            });
+            
+            componentsContainer.appendChild(newRow);
+        });
+        
+        // Set up initial remove button
+        document.querySelector('.remove-component').addEventListener('click', function(e) {
+            const componentRows = document.querySelectorAll('.component-row');
+            if (componentRows.length > 1) {
+                e.target.closest('.component-row').remove();
+            } else {
+                const inputs = e.target.closest('.component-row').querySelectorAll('input, select');
+                inputs.forEach(input => {
+                    if (input.type !== 'button') {
+                        input.value = '';
+                    }
+                    if (input.name === 'component_quantity') {
+                        input.value = '1';
+                    }
+                    if (input.name === 'component_price') {
+                        input.value = '0';
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endblock %} 
